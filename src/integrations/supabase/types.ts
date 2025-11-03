@@ -2340,6 +2340,143 @@ export type Database = {
         }
         Relationships: []
       }
+      nelson_conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_pinned: boolean | null
+          mode: string | null
+          title: string | null
+          updated_at: string | null
+          user_sub: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          mode?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_sub?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          mode?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_sub?: string | null
+        }
+        Relationships: []
+      }
+      nelson_messages: {
+        Row: {
+          citations: Json | null
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          role: string
+        }
+        Insert: {
+          citations?: Json | null
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role: string
+        }
+        Update: {
+          citations?: Json | null
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nelson_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "nelson_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nelson_textbook_chunks: {
+        Row: {
+          book_title: string
+          chapter_title: string | null
+          chunk_text: string
+          created_at: string | null
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          page_number: number | null
+          section_title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          book_title?: string
+          chapter_title?: string | null
+          chunk_text: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          section_title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          book_title?: string
+          chapter_title?: string | null
+          chunk_text?: string
+          created_at?: string | null
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          section_title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      nelson_user_settings: {
+        Row: {
+          ai_style: string | null
+          created_at: string | null
+          font_size: string | null
+          show_disclaimers: boolean | null
+          theme: string | null
+          updated_at: string | null
+          user_sub: string
+        }
+        Insert: {
+          ai_style?: string | null
+          created_at?: string | null
+          font_size?: string | null
+          show_disclaimers?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_sub: string
+        }
+        Update: {
+          ai_style?: string | null
+          created_at?: string | null
+          font_size?: string | null
+          show_disclaimers?: boolean | null
+          theme?: string | null
+          updated_at?: string | null
+          user_sub?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -3786,6 +3923,21 @@ export type Database = {
           similarity: number
           source_dataset: string
           text_preview: string
+        }[]
+      }
+      match_nelson_chunks: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          chapter_title: string
+          chunk_text: string
+          id: string
+          page_number: number
+          section_title: string
+          similarity: number
         }[]
       }
       search_drugs: {

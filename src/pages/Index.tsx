@@ -1,12 +1,41 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { AnimatePresence } from 'framer-motion';
+import { useChatStore } from '@/store/chatStore';
+import { SplashScreen } from '@/components/SplashScreen';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
+import { ChatInterface } from '@/components/ChatInterface';
+import { FooterMenuBar } from '@/components/FooterMenuBar';
 
 const Index = () => {
+  const currentView = useChatStore((state) => state.currentView);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <AnimatePresence mode="wait">
+        {currentView === 'splash' && <SplashScreen key="splash" />}
+        {currentView === 'welcome' && <WelcomeScreen key="welcome" />}
+        {currentView === 'chat' && <ChatInterface key="chat" />}
+        {currentView === 'history' && (
+          <div key="history" className="p-8 pb-20">
+            <h1 className="text-2xl font-bold mb-4">History</h1>
+            <p className="text-muted-foreground">Your conversation history will appear here.</p>
+          </div>
+        )}
+        {currentView === 'settings' && (
+          <div key="settings" className="p-8 pb-20">
+            <h1 className="text-2xl font-bold mb-4">Settings</h1>
+            <p className="text-muted-foreground">Settings panel coming soon.</p>
+          </div>
+        )}
+        {currentView === 'profile' && (
+          <div key="profile" className="p-8 pb-20">
+            <h1 className="text-2xl font-bold mb-4">Profile</h1>
+            <p className="text-muted-foreground">Profile information coming soon.</p>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {currentView !== 'splash' && currentView !== 'chat' && <FooterMenuBar />}
+      {currentView === 'chat' && <FooterMenuBar />}
     </div>
   );
 };
