@@ -3,6 +3,9 @@ import { useChatStore } from '@/store/chatStore';
 import { SplashScreen } from '@/components/SplashScreen';
 import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { ChatInterface } from '@/components/ChatInterface';
+import { HistoryView } from '@/components/HistoryView';
+import { SettingsView } from '@/components/SettingsView';
+import { ProfileView } from '@/components/ProfileView';
 import { FooterMenuBar } from '@/components/FooterMenuBar';
 
 const Index = () => {
@@ -14,24 +17,9 @@ const Index = () => {
         {currentView === 'splash' && <SplashScreen key="splash" />}
         {currentView === 'welcome' && <WelcomeScreen key="welcome" />}
         {currentView === 'chat' && <ChatInterface key="chat" />}
-        {currentView === 'history' && (
-          <div key="history" className="p-8 pb-20">
-            <h1 className="text-2xl font-bold mb-4">History</h1>
-            <p className="text-muted-foreground">Your conversation history will appear here.</p>
-          </div>
-        )}
-        {currentView === 'settings' && (
-          <div key="settings" className="p-8 pb-20">
-            <h1 className="text-2xl font-bold mb-4">Settings</h1>
-            <p className="text-muted-foreground">Settings panel coming soon.</p>
-          </div>
-        )}
-        {currentView === 'profile' && (
-          <div key="profile" className="p-8 pb-20">
-            <h1 className="text-2xl font-bold mb-4">Profile</h1>
-            <p className="text-muted-foreground">Profile information coming soon.</p>
-          </div>
-        )}
+        {currentView === 'history' && <HistoryView key="history" />}
+        {currentView === 'settings' && <SettingsView key="settings" />}
+        {currentView === 'profile' && <ProfileView key="profile" />}
       </AnimatePresence>
 
       {currentView !== 'splash' && currentView !== 'chat' && <FooterMenuBar />}

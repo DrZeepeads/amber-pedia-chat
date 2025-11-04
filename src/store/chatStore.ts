@@ -29,6 +29,8 @@ export interface UserSettings {
   fontSize: 'small' | 'medium' | 'large';
   aiStyle: 'concise' | 'balanced' | 'detailed';
   showDisclaimers: boolean;
+  notifications: boolean;
+  shareAnalytics: boolean;
 }
 
 interface ChatStore {
@@ -50,6 +52,7 @@ interface ChatStore {
   setActiveTab: (tab: ChatStore['activeTab']) => void;
   setMode: (mode: 'academic' | 'clinical') => void;
   startNewConversation: () => void;
+  setCurrentConversation: (conversation: Conversation | null) => void;
   sendMessage: (content: string) => Promise<void>;
   loadConversations: () => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
@@ -68,6 +71,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     fontSize: 'medium',
     aiStyle: 'balanced',
     showDisclaimers: true,
+    notifications: true,
+    shareAnalytics: false,
   },
 
   setCurrentView: (view) => set({ currentView: view }),
@@ -75,6 +80,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
   
   setMode: (mode) => set({ mode }),
+  
+  setCurrentConversation: (conversation) => set({ currentConversation: conversation }),
   
   startNewConversation: () => {
     const newConv: Conversation = {
