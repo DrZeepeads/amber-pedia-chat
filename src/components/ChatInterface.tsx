@@ -11,6 +11,7 @@ export const ChatInterface = () => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { currentConversation, isStreaming, mode, sendMessage, setCurrentView } = useChatStore();
+  const { isOnline } = useChatStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,7 +37,6 @@ export const ChatInterface = () => {
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
-      {/* Header */}
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -60,6 +60,10 @@ export const ChatInterface = () => {
           <MoreVertical className="h-5 w-5" />
         </Button>
       </motion.header>
+
+      {!isOnline && (
+        <div className="bg-amber-500 text-white text-center text-xs py-2">You're offline. Messages will be queued and sent when reconnected.</div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 pb-32">
