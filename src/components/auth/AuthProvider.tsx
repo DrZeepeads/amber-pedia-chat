@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import type { Session, User } from '@supabase/supabase-js';
 import LoginScreen from './LoginScreen';
+import { sentry } from '@/main';
+import { Sentry } from '@/lib/sentry';
 
 interface AuthContextValue {
   user: User | null;
@@ -84,6 +86,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('storage', storageHandler);
     };
   }, []);
+
+  // Track user context for Sentry
+  useEffect(() => {
+    if (user) {
+      sentry?.setUserContext({
+        id: user.id,
+        email: user.email,
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,

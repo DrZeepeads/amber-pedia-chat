@@ -6,6 +6,8 @@ import { config } from "@/lib/config";
 import { supabase } from "@/integrations/supabase/client";
 import { useChatStore } from "@/store/chatStore";
 import { preloadCriticalAssets, clearOldCaches } from "@/lib/cacheManager";
+import { initSentry, Sentry } from "@/lib/sentry";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 if (config.app.env === 'development') {
   console.log('App Configuration:', {
@@ -29,7 +31,20 @@ try {
   throw error;
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Initialize Sentry before React
+const sentry = initSentry();
+
+// Export for use in auth
+export { sentry };
+
+createRoot(document.getElementById("root")!).render(
+  <Sentry.ErrorBoundary 
+    fallback={<ErrorBoundary />}
+    showDialog
+  >
+    <App />
+  </Sentry.ErrorBoundary>
+);
 
 // Session management
 (function initSessionManagement() {

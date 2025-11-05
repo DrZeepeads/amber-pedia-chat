@@ -272,10 +272,24 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in nelson-chat function:', error);
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      context: {
+        message: sanitizedMessage?.substring(0, 100),
+        mode,
+        conversationId,
+        userId: user?.id,
+      },
+    };
+    
+    console.error('[NELSON-CHAT-ERROR]', JSON.stringify(errorLog));
+    
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorId: crypto.randomUUID(), // For user support reference
       }),
       {
         status: 500,
