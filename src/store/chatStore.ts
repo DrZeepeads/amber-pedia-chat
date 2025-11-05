@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
+import { validateMessage } from '@/lib/validation';
 <<<<<<< HEAD
 import { toast } from '@/components/ui/use-toast';
 =======
@@ -167,6 +168,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   sendMessage: async (content: string) => {
+    try {
+      validateMessage(content, get().mode);
+    } catch (error: any) {
+      try { (toast as any)({ title: 'Invalid input', description: error?.message || 'Message validation failed' }); } catch {}
+      return;
+    }
     let { currentConversation, mode, isOnline } = get();
     if (!currentConversation) {
       await get().startNewConversation();

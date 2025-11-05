@@ -27,12 +27,79 @@ serve(async (req) => {
       );
     }
 
+    // Validate message content
+    if (!message || message.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Message cannot be empty' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    if (message.length > 2000) {
+      return new Response(
+        JSON.stringify({ error: 'Message too long (max 2000 characters)' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Validate mode
+    if (mode && !['academic', 'clinical'].includes(mode)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid mode' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Check rate limit
+    const { data: withinLimit } = await supabaseClient.rpc('check_rate_limit', {
+      p_user_sub: user.id,
+      p_action: 'send_message',
+      p_max_count: 100,
+      p_window_minutes: 60,
+    });
+
+    if (!withinLimit) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Sanitize message (remove potential XSS)
+    const sanitizedMessage = message
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .trim();
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Generating embedding for query:', message);
+    console.log('Generating embedding for query:', sanitizedMessage);
     
     // Generate embedding using Mistral
     const embeddingResponse = await fetch('https://api.mistral.ai/v1/embeddings', {
@@ -43,7 +110,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'mistral-embed',
-        input: [message],
+        input: [sanitizedMessage],
       }),
     });
 
@@ -85,8 +152,8 @@ serve(async (req) => {
       : `You are Nelson-GPT, an academic teaching assistant for pediatric medicine. Provide comprehensive, educational responses based on Nelson Textbook of Pediatrics. Explain concepts thoroughly with relevant pathophysiology, differential diagnoses, and clinical pearls. Always cite your sources with chapter and page numbers.`;
 
     const userPrompt = context
-      ? `Context from Nelson Textbook of Pediatrics:\n\n${context}\n\nQuestion: ${message}\n\nProvide a comprehensive answer based on the context above. Include citations to specific chapters and sections.`
-      : `Question: ${message}\n\nNote: No specific context was found in the Nelson Textbook. Please provide general pediatric guidance and mention that specific references should be consulted.`;
+      ? `Context from Nelson Textbook of Pediatrics:\n\n${context}\n\nQuestion: ${sanitizedMessage}\n\nProvide a comprehensive answer based on the context above. Include citations to specific chapters and sections.`
+      : `Question: ${sanitizedMessage}\n\nNote: No specific context was found in the Nelson Textbook. Please provide general pediatric guidance and mention that specific references should be consulted.`;
 
     console.log('Streaming response from Mistral...');
 
@@ -122,7 +189,7 @@ serve(async (req) => {
         .insert({
           conversation_id: conversationId,
           role: 'user',
-          content: message,
+          content: sanitizedMessage,
         });
       
       if (messageError) {
