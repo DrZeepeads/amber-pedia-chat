@@ -6,6 +6,7 @@ import { Switch } from './ui/switch';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { config } from '@/lib/config';
 
 export const SettingsView = () => {
   const { settings, updateSettings } = useChatStore();
@@ -198,7 +199,10 @@ export const SettingsView = () => {
             <div className="space-y-2 text-sm text-muted-foreground">
               <p className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                <span>Version 1.0.0</span>
+                <span>
+                  Version {config.app.version}
+                  {config.app.env !== 'production' ? ` (${config.app.env})` : ''}
+                </span>
               </p>
               <p className="leading-relaxed">
                 Nelson-GPT provides evidence-based pediatric knowledge assistance, 

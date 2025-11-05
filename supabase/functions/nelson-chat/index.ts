@@ -18,9 +18,13 @@ serve(async (req) => {
       throw new Error('Message is required');
     }
 
-    const MISTRAL_API_KEY = Deno.env.get('MISTRAL_API_KEY');
-    if (!MISTRAL_API_KEY) {
-      throw new Error('MISTRAL_API_KEY is not configured');
+    const mistralKey = Deno.env.get('MISTRAL_API_KEY');
+    if (!mistralKey) {
+      console.error('MISTRAL_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     // Initialize Supabase client
@@ -34,7 +38,7 @@ serve(async (req) => {
     const embeddingResponse = await fetch('https://api.mistral.ai/v1/embeddings', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${MISTRAL_API_KEY}`,
+        'Authorization': `Bearer ${mistralKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -90,7 +94,7 @@ serve(async (req) => {
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${MISTRAL_API_KEY}`,
+        'Authorization': `Bearer ${mistralKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
