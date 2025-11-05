@@ -4,6 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import fs from "fs";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig(({ mode }) => {
   const manifestPath = path.resolve(__dirname, "public", "manifest.json");
@@ -14,6 +15,9 @@ export default defineConfig(({ mode }) => {
   } catch {}
 
   return {
+    build: {
+      sourcemap: mode === 'production',
+    },
     server: {
       host: "::",
       port: 8080,
@@ -66,6 +70,14 @@ export default defineConfig(({ mode }) => {
               options: { cacheName: "html-cache", networkTimeoutSeconds: 3 },
             },
           ],
+        },
+      }),
+      mode === "production" && sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        sourcemaps: {
+          assets: './dist/assets/**',
         },
       }),
       mode === "development" && componentTagger(),

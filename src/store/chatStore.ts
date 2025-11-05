@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { validateMessage } from '@/lib/validation';
 import { toast } from '@/components/ui/sonner';
 import { db, initDB } from '@/lib/db';
+import { Sentry } from '@/lib/sentry';
+import { trackPerformanceWithContext } from '@/lib/performance';
 
 export interface Message {
   id: string;
@@ -146,10 +148,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   sendMessage: async (content: string) => {
+    return trackPerformanceWithContext('sendMessage', { mode: get().mode }, async () => {
     try {
       validateMessage(content, get().mode);
     } catch (error: any) {
       try { (toast as any)({ title: 'Invalid input', description: error?.message || 'Message validation failed' }); } catch {}
+      Sentry.captureException(error, {
+        tags: {
+          feature: 'chat',
+          action: 'message_validation',
+        },
+        contexts: {
+          message: {
+            content: content.substring(0, 100),
+            mode: get().mode,
+          },
+        },
+      });
       return;
     }
     let { currentConversation, mode, isOnline } = get();
@@ -365,6 +380,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       set({ isStreaming: false });
     } catch (err: any) {
       const message = err?.message || 'Something went wrong.';
+      Sentry.captureException(err, {
+        tags: {
+          feature: 'chat',
+          action: 'send_message',
+        },
+        contexts: {
+          conversation: {
+            id: currentConversation?.id,
+            mode: mode,
+            messageCount: currentConversation?.messages.length,
+          },
+        },
+      });
+      
       set((state) => ({
         currentConversation: state.currentConversation
           ? {
@@ -378,6 +407,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       set({ isStreaming: false });
       (toast as any)({ title: 'Error', description: message });
     }
+    });
   },
 
   saveMessage: async (conversationId: string, message: Message) => {
@@ -427,6 +457,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       .order('updated_at', { ascending: false })
       .range(0, 49);
     if (error) {
+      Sentry.captureException(error, {
+        tags: { feature: 'history', action: 'load_conversations' },
+      });
       set({ conversations: [] });
       return;
     }
