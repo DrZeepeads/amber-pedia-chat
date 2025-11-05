@@ -7,9 +7,22 @@ import { HistoryView } from '@/components/HistoryView';
 import { SettingsView } from '@/components/SettingsView';
 import { ProfileView } from '@/components/ProfileView';
 import { FooterMenuBar } from '@/components/FooterMenuBar';
+import LoginScreen from '@/components/auth/LoginScreen';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const Index = () => {
   const currentView = useChatStore((state) => state.currentView);
+  const setUser = useChatStore((state) => state.setUser);
+  const { user, loading } = useAuth();
+
+  if (typeof window !== 'undefined') {
+    queueMicrotask(() => {
+      if (user) setUser({ id: user.id, email: user.email });
+    });
+  }
+
+  if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+  if (!user) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-background">

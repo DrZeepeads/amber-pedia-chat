@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { toast } from "@/components/ui/sonner";
 import { config } from "@/lib/config";
+import { supabase } from "@/integrations/supabase/client";
 
 if (config.app.env === 'development') {
   console.log('App Configuration:', {
@@ -14,7 +15,6 @@ if (config.app.env === 'development') {
 }
 
 try {
-  // Accessing config will throw if validation fails
   config;
 } catch (error: any) {
   document.getElementById('root')!.innerHTML = `
@@ -28,6 +28,38 @@ try {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// Session management
+(function initSessionManagement() {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') {
+      toast('Signed out');
+      window.location.href = '/';
+    } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
+      toast('Session expired. Please sign in again.');
+      window.location.href = '/';
+    }
+  });
+
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+      try { await supabase.auth.getSession(); } catch {}
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key && e.key.includes('sb-')) {
+      window.location.reload();
+    }
+  });
+
+  const remember = localStorage.getItem('rememberMe');
+  if (remember === 'false') {
+    window.addEventListener('beforeunload', () => {
+      supabase.auth.signOut();
+    });
+  }
+})();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
