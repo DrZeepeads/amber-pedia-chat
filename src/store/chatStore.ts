@@ -101,7 +101,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
   
   sendMessage: async (content: string) => {
-    const { currentConversation, mode } = get();
+    const { currentConversation, mode, settings } = get();
+    const aiStyle = settings.aiStyle;
     
     // Create conversation if none exists
     if (!currentConversation) {
