@@ -71,3 +71,20 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+---
+
+## Supabase Edge Function Secrets
+
+Set these secrets using Supabase CLI or dashboard:
+
+```bash
+# Set Mistral API key
+supabase secrets set MISTRAL_API_KEY=your_mistral_api_key
+
+# Verify secrets
+supabase secrets list
+```
+
+Required secrets:
+- `MISTRAL_API_KEY`: Mistral AI API key for embeddings and chat completions
