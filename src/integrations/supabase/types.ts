@@ -2456,6 +2456,8 @@ export type Database = {
           theme: string | null
           updated_at: string | null
           user_sub: string
+          notifications: boolean | null
+          share_analytics: boolean | null
         }
         Insert: {
           ai_style?: string | null
@@ -2465,6 +2467,8 @@ export type Database = {
           theme?: string | null
           updated_at?: string | null
           user_sub: string
+          notifications?: boolean | null
+          share_analytics?: boolean | null
         }
         Update: {
           ai_style?: string | null
@@ -2474,6 +2478,8 @@ export type Database = {
           theme?: string | null
           updated_at?: string | null
           user_sub?: string
+          notifications?: boolean | null
+          share_analytics?: boolean | null
         }
         Relationships: []
       }

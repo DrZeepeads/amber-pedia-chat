@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, mode, conversationId } = await req.json();
+    const { message, mode, conversationId, aiStyle } = await req.json();
     
     if (!message) {
       throw new Error('Message is required');
@@ -87,6 +87,7 @@ serve(async (req) => {
     console.log('Streaming response from Mistral...');
 
     // Stream response from Mistral
+    const maxTokens = aiStyle === 'concise' ? 500 : aiStyle === 'detailed' ? 2000 : 1000;
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -101,7 +102,7 @@ serve(async (req) => {
         ],
         stream: true,
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: maxTokens,
       }),
     });
 

@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 export interface Message {
   id: string;
@@ -34,20 +36,16 @@ export interface UserSettings {
 }
 
 interface ChatStore {
-  // UI State
   currentView: 'splash' | 'welcome' | 'chat' | 'history' | 'settings' | 'profile';
   activeTab: 'chat' | 'history' | 'settings' | 'profile';
-  
-  // Chat State
   currentConversation: Conversation | null;
   conversations: Conversation[];
   isStreaming: boolean;
   mode: 'academic' | 'clinical';
-  
-  // User Settings
   settings: UserSettings;
-  
-  // Actions
+  notificationPermission?: NotificationPermission | 'unsupported';
+  lastSettingsSaveFailed?: boolean;
+  pendingSettingsUpsert?: Partial<UserSettings> | null;
   setCurrentView: (view: ChatStore['currentView']) => void;
   setActiveTab: (tab: ChatStore['activeTab']) => void;
   setMode: (mode: 'academic' | 'clinical') => void;
@@ -56,7 +54,8 @@ interface ChatStore {
   sendMessage: (content: string) => Promise<void>;
   loadConversations: () => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
-  updateSettings: (settings: Partial<UserSettings>) => void;
+  loadUserSettings: () => Promise<void>;
+  updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -74,6 +73,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     notifications: true,
     shareAnalytics: false,
   },
+  notificationPermission: typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported',
+  lastSettingsSaveFailed: false,
+  pendingSettingsUpsert: null,
 
   setCurrentView: (view) => set({ currentView: view }),
   
@@ -182,9 +184,76 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }));
   },
   
-  updateSettings: (newSettings) => {
+  loadUserSettings: async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('nelson_user_settings')
+        .select('*')
+        .eq('user_sub', user.id)
+        .single();
+      if (data) {
+        set({
+          settings: {
+            theme: (data as any).theme || 'light',
+            fontSize: (data as any).font_size || 'medium',
+            aiStyle: (data as any).ai_style || 'balanced',
+            showDisclaimers: (data as any).show_disclaimers ?? true,
+            notifications: (data as any).notifications ?? true,
+            shareAnalytics: (data as any).share_analytics ?? false,
+          },
+        });
+      } else if (error && (error as any).code === 'PGRST116') {
+        await supabase.from('nelson_user_settings').insert({
+          user_sub: user.id,
+          theme: 'light',
+          font_size: 'medium',
+          ai_style: 'balanced',
+          show_disclaimers: true,
+          notifications: true,
+          share_analytics: false,
+        } as any);
+      }
+    } catch (e) {
+      toast({ title: 'Using default settings', description: 'Failed to load settings from cloud.' });
+    }
+  },
+  
+  updateSettings: async (newSettings) => {
     set((state) => ({
       settings: { ...state.settings, ...newSettings },
     }));
+    if (newSettings.notifications && typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        set({ notificationPermission: permission });
+      } catch {}
+    }
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+      const pending = get().pendingSettingsUpsert || {};
+      const effective = { ...get().settings, ...pending };
+      const merged = { ...effective, ...newSettings };
+      const dbSettings: any = {
+        user_sub: user.id,
+        theme: merged.theme,
+        font_size: merged.fontSize,
+        ai_style: merged.aiStyle,
+        show_disclaimers: merged.showDisclaimers,
+        notifications: merged.notifications,
+        share_analytics: merged.shareAnalytics,
+      };
+      await supabase
+        .from('nelson_user_settings')
+        .upsert(dbSettings, { onConflict: 'user_sub' });
+      set({ lastSettingsSaveFailed: false, pendingSettingsUpsert: null });
+    } catch (e) {
+      set({ lastSettingsSaveFailed: true, pendingSettingsUpsert: newSettings });
+      toast({ title: 'Settings saved locally', description: 'Cloud save failed. Will retry on next change.' });
+    }
   },
 }));

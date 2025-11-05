@@ -6,9 +6,19 @@ import { Switch } from './ui/switch';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { useEffect } from 'react';
 
 export const SettingsView = () => {
   const { settings, updateSettings } = useChatStore();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+  }, [settings.theme]);
+
+  useEffect(() => {
+    const sizes: Record<'small' | 'medium' | 'large', string> = { small: '14px', medium: '16px', large: '18px' };
+    document.documentElement.style.fontSize = sizes[settings.fontSize];
+  }, [settings.fontSize]);
 
   const SettingSection = ({ 
     icon: Icon, 
