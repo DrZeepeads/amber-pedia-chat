@@ -71,3 +71,29 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+---
+
+## Nelson-GPT Streaming Chat Setup
+
+This app streams responses from a Supabase Edge Function that calls Mistral AI with RAG over Nelson Textbook chunks.
+
+Required configuration:
+
+- Supabase Edge Function: `nelson-chat` (already included in `supabase/functions/nelson-chat/index.ts`)
+- Secrets (run in your Supabase project):
+  - `MISTRAL_API_KEY`: Your Mistral API key
+  - `SUPABASE_SERVICE_ROLE_KEY`: Service role key (functions runtime)
+  - `SUPABASE_URL`: Your Supabase URL
+
+Example (Supabase CLI):
+
+```
+supabase secrets set MISTRAL_API_KEY=... SUPABASE_SERVICE_ROLE_KEY=... SUPABASE_URL=...
+```
+
+Notes:
+- If `MISTRAL_API_KEY` is missing, the function returns a 500 with an error message.
+- The frontend uses the Supabase JS client to invoke `nelson-chat` and parses Server-Sent Events (SSE) for smooth, real-time streaming.
+- Conversations and messages are persisted to `nelson_conversations` and `nelson_messages`. LocalStorage is used only as an offline fallback.
+
