@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useChatStore } from "@/store/chatStore";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
@@ -38,11 +39,25 @@ createRoot(document.getElementById("root")!).render(<App />);
   }
 })();
 
+// Online/offline events and initial data load
+window.addEventListener('online', () => {
+  useChatStore.getState().setOnlineStatus(true);
+  useChatStore.getState().flushOfflineQueue();
+});
+window.addEventListener('offline', () => {
+  useChatStore.getState().setOnlineStatus(false);
+});
+
+(async () => {
+  await useChatStore.getState().loadUser();
+  await useChatStore.getState().loadSettings();
+  await useChatStore.getState().loadConversations();
+})();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
-        console.log('SW registered');
         if (reg.waiting) {
           toast("New version available. Refresh to update.", {
             action: {
@@ -70,6 +85,13 @@ if ('serviceWorker' in navigator) {
 
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
+    });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const type = (event.data && event.data.type) || '';
+      if (type === 'SYNC_MESSAGES' || type === 'SYNC_CONVERSATIONS') {
+        useChatStore.getState().flushOfflineQueue();
+      }
     });
   });
 }

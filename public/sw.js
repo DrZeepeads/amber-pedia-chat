@@ -32,7 +32,11 @@ registerRoute(({ url }) => url.pathname.startsWith('/assets/'), new StaleWhileRe
 setDefaultHandler(new StaleWhileRevalidate({ cacheName: 'default-cache' }));
 
 self.addEventListener('sync', async (event) => {
-  if (event.tag === 'sync-messages') {
-    event.waitUntil((async () => { const clientsList = await self.clients.matchAll({ includeUncontrolled: true }); clientsList.forEach((client) => client.postMessage({ type: 'SYNC_MESSAGES' })); })());
+  if (event.tag === 'sync-messages' || event.tag === 'sync-conversations') {
+    event.waitUntil((async () => {
+      const clientsList = await self.clients.matchAll({ includeUncontrolled: true });
+      const type = event.tag === 'sync-conversations' ? 'SYNC_CONVERSATIONS' : 'SYNC_MESSAGES';
+      clientsList.forEach((client) => client.postMessage({ type }));
+    })());
   }
 });
