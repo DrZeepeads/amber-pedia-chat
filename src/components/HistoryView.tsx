@@ -6,10 +6,11 @@ import { ScrollArea } from './ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 
 export const HistoryView = () => {
-  const { conversations, deleteConversation, setCurrentView, setCurrentConversation } = useChatStore();
+  const { conversations, deleteConversation, setCurrentView, setCurrentConversation, loadConversationMessages } = useChatStore();
 
-  const handleConversationClick = (conv: typeof conversations[0]) => {
+  const handleConversationClick = async (conv: typeof conversations[0]) => {
     setCurrentConversation(conv);
+    await loadConversationMessages(conv.id);
     setCurrentView('chat');
   };
 
@@ -71,7 +72,7 @@ export const HistoryView = () => {
                         <Calendar className="h-3 w-3" />
                         {formatDistanceToNow(conv.createdAt, { addSuffix: true })}
                       </span>
-                      <span>{conv.messages.length} messages</span>
+                      <span>{(conv.messages?.length || (conv as any).messageCount || 0)} messages</span>
                     </div>
                   </div>
                   <Button
