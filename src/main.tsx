@@ -5,6 +5,7 @@ import { toast } from "@/components/ui/sonner";
 import { config } from "@/lib/config";
 import { supabase } from "@/integrations/supabase/client";
 import { useChatStore } from "@/store/chatStore";
+import { preloadCriticalAssets, clearOldCaches } from "@/lib/cacheManager";
 
 if (config.app.env === 'development') {
   console.log('App Configuration:', {
@@ -78,7 +79,9 @@ window.addEventListener('offline', () => {
 })();
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
+    await preloadCriticalAssets();
+    await clearOldCaches();
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
         if (reg.waiting) {

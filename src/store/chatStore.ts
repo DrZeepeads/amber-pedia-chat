@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
-<<<<<<< HEAD
-import { toast } from '@/components/ui/use-toast';
-=======
 import { toast } from '@/components/ui/sonner';
 import { addToQueue, getQueue, deleteFromQueue, type OfflineAction } from '@/utils/idb';
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
+import { db } from '@/lib/db';
 
 export interface Message {
   id: string;
@@ -114,11 +111,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     shareAnalytics: false,
   },
   user: null,
-<<<<<<< HEAD
-
-  setUser: (user) => set({ user }),
-=======
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
 
   setCurrentView: (view) => set({ currentView: view }),
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -144,14 +136,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       user_sub: freshUser.id,
       title: 'New Conversation',
       mode: get().mode,
-<<<<<<< HEAD
       messages: [],
       createdAt: new Date(),
       isPinned: false,
       user_sub: get().user?.id,
-=======
-      is_pinned: false,
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
     };
     try {
       const { data, error } = await supabase
@@ -173,10 +161,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       currentConversation = get().currentConversation;
     }
     if (!currentConversation) return;
-<<<<<<< HEAD
-
-=======
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -192,58 +176,49 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     set((state) => {
       if (!state.currentConversation) return {} as any;
-<<<<<<< HEAD
-      const updated = state.conversations.some((c) => c.id === state.currentConversation!.id)
-        ? state.conversations.map((c) => (c.id === state.currentConversation!.id ? state.currentConversation! : c))
-        : [...state.conversations, state.currentConversation!];
-      if (typeof window !== 'undefined' && !get().isOnline) localStorage.setItem('conversations', JSON.stringify(updated));
-=======
       const exists = state.conversations.some((c) => c.id === state.currentConversation!.id);
       const updated = exists ? state.conversations.map((c) => (c.id === state.currentConversation!.id ? state.currentConversation! : c)) : [...state.conversations, state.currentConversation!];
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
       return { conversations: updated } as any;
     });
 
     if (!isOnline) {
-      const user = get().user;
-      if (!user) await get().loadUser();
-      const u = get().user!;
-      await addToQueue({
-        type: 'send_message',
-        conversation: {
-          id: currentConversation.id,
-          user_sub: u.id,
-          title: currentConversation.title || 'New Conversation',
-          mode,
-          is_pinned: currentConversation.isPinned,
-        },
-        message: {
-          role: 'user',
-          content,
-          citations: [],
-          timestamp: new Date().toISOString(),
-        },
+      // Queue for later using new IndexedDB
+      await db.addToQueue('send_message', {
+        conversationId: currentConversation.id,
+        content,
+        mode: get().mode,
       });
-      if (navigator.serviceWorker && 'ready' in navigator.serviceWorker) {
-        navigator.serviceWorker.ready.then((reg) => {
-          // @ts-ignore
-          if (reg.sync && 'register' in reg.sync) {
-            try { // @ts-ignore
-              reg.sync.register('sync-conversations');
-            } catch {}
-          }
-        });
+      
+      // Show queued message in UI
+      const queuedMessage: Message = {
+        id: userMessage.id,
+        role: 'user',
+        content,
+        timestamp: new Date(),
+        status: 'pending',
+      };
+      
+      // Add to local conversation
+      set((state) => ({
+        currentConversation: {
+          ...state.currentConversation!,
+          messages: [...state.currentConversation!.messages, queuedMessage],
+        },
+      }));
+      
+      // Register background sync
+      if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.sync.register('sync-conversations');
       }
+      
+      toast.info('Message queued for sending when online');
       return;
     }
 
-<<<<<<< HEAD
-=======
     try {
       await get().saveMessage(currentConversation.id, userMessage);
     } catch (_) {}
-
->>>>>>> db2481c (Capy jam: Implement Supabase-backed persistence for conversations, messages, and settings with offline-first sync. Replace localStorage, add IndexedDB queue, online/offline listeners, SW background sync, and data migration from legacy localStorage.)
     set({ isStreaming: true });
 
     const assistantMessage: Message = {
@@ -632,46 +607,87 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   flushOfflineQueue: async () => {
     if (get().offlineQueueType === 'syncing') return;
     set({ offlineQueueType: 'syncing' });
+    
     try {
-      const records = await getQueue();
-      for (const rec of records) {
-        let attempt = 0;
-        const maxAttempts = 5;
-        while (attempt < maxAttempts) {
-          try {
-            const action = rec.action as OfflineAction;
-            if (action.type === 'send_message') {
-              const conv = action.conversation;
-              const { data: existing } = await supabase.from('nelson_conversations').select('id').eq('id', conv.id).maybeSingle();
-              if (!existing) {
-                await supabase.from('nelson_conversations').insert({ id: conv.id, user_sub: conv.user_sub, title: conv.title, mode: conv.mode, is_pinned: conv.is_pinned });
-              }
-              await supabase.from('nelson_messages').insert({ conversation_id: conv.id, role: action.message.role, content: action.message.content, citations: action.message.citations || [], metadata: { timestamp: action.message.timestamp } });
-              await supabase.from('nelson_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conv.id);
-            } else if (action.type === 'delete_conversation') {
-              await supabase.from('nelson_conversations').delete().eq('id', action.conversationId);
-            } else if (action.type === 'update_settings') {
-              const u = get().user || (await supabase.auth.getUser()).data.user ? { id: (await supabase.auth.getUser()).data.user!.id } : null;
-              if (u) {
-                await supabase.from('nelson_user_settings').upsert({ user_sub: u.id, theme: action.settings.theme, font_size: action.settings.fontSize, ai_style: action.settings.aiStyle, show_disclaimers: action.settings.showDisclaimers }, { onConflict: 'user_sub' });
-              }
+      const queue = await db.getQueue();
+      
+      if (queue.length === 0) return;
+      
+      toast.info(`Syncing ${queue.length} queued action(s)...`);
+      
+      for (const item of queue) {
+        try {
+          if (item.action === 'send_message') {
+            await get().sendMessage(item.payload.content);
+          } else if (item.action === 'delete_conversation') {
+            await get().deleteConversation(item.payload.id);
+          } else if (item.action === 'update_settings') {
+            await get().updateSettings(item.payload);
+          }
+          
+          // Remove from queue on success
+          if (item.id) {
+            await db.removeFromQueue(item.id);
+          }
+        } catch (error) {
+          console.error('Failed to process queued action:', error);
+          
+          // Increment retry count
+          if (item.retryCount >= 3) {
+            // Give up after 3 retries
+            if (item.id) {
+              await db.removeFromQueue(item.id);
             }
-            await deleteFromQueue(rec.id);
-            break;
-          } catch (_) {
-            attempt++;
-            const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
-            await new Promise((r) => setTimeout(r, delay));
-            if (attempt >= maxAttempts) throw _;
+            toast.error('Failed to sync some actions');
           }
         }
       }
-      toast('All offline changes synced');
-    } catch (_) {
-      toast('Some offline changes failed to sync');
+      
+      toast.success('All actions synced');
+    } catch (error) {
+      console.error('Queue flush error:', error);
+      toast.error('Failed to sync offline actions');
     } finally {
       set({ offlineQueueType: 'idle' });
     }
+  },
+
+  syncConversations: async () => {
+    const localConvs = await db.getConversations();
+    const user = get().user;
+    
+    if (!user) return;
+    
+    // Get server conversations
+    const { data: serverConvs, error } = await supabase
+      .from('nelson_conversations')
+      .select('*, messages:nelson_messages(*)')
+      .eq('user_sub', user.id);
+    
+    if (error) throw error;
+    
+    // Merge logic (server wins for conflicts)
+    const merged = new Map();
+    
+    // Add server conversations
+    serverConvs?.forEach((conv) => {
+      merged.set(conv.id, { ...conv, syncStatus: 'synced' });
+    });
+    
+    // Add local-only conversations
+    localConvs.forEach((conv) => {
+      if (!merged.has(conv.id) && conv.syncStatus !== 'synced') {
+        merged.set(conv.id, conv);
+      }
+    });
+    
+    // Save merged to IndexedDB
+    for (const conv of merged.values()) {
+      await db.saveConversation(conv);
+    }
+    
+    // Update state
+    set({ conversations: Array.from(merged.values()) });
   },
 
   retryMessage: async (messageId: string) => {
