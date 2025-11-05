@@ -130,7 +130,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: [],
       createdAt: new Date(),
       isPinned: false,
-      user_sub: get().user?.id,
     } as any;
     try {
       const { data, error } = await supabase
