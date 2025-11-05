@@ -1,3 +1,8 @@
+# Nelson-GPT
+
+![CI](https://github.com/DrZeepeads/amber-pedia-chat/workflows/CI/badge.svg)
+![Codecov](https://codecov.io/gh/DrZeepeads/amber-pedia-chat/branch/main/graph/badge.svg)
+
 # Welcome to your Lovable project
 
 ## Project info
