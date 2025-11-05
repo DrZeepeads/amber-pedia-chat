@@ -27,6 +27,7 @@ export interface Conversation {
   messages: Message[];
   createdAt: Date;
   isPinned: boolean;
+  user_sub?: string;
 }
 
 export interface UserSettings {
@@ -48,6 +49,8 @@ interface ChatStore {
   isOnline: boolean;
   offlineQueue: { conversationId: string; content: string; mode: 'academic' | 'clinical' }[];
   settings: UserSettings;
+  user: { id: string; email?: string | null } | null;
+  setUser: (user: { id: string; email?: string | null } | null) => void;
   setCurrentView: (view: ChatStore['currentView']) => void;
   setActiveTab: (tab: ChatStore['activeTab']) => void;
   setMode: (mode: 'academic' | 'clinical') => void;
@@ -79,6 +82,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     notifications: true,
     shareAnalytics: false,
   },
+  user: null,
+
+  setUser: (user) => set({ user }),
 
   setCurrentView: (view) => set({ currentView: view }),
   
@@ -96,6 +102,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: [],
       createdAt: new Date(),
       isPinned: false,
+      user_sub: get().user?.id,
     };
     set((state) => ({
       currentConversation: newConv,
