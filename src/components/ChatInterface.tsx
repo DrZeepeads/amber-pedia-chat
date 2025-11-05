@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, MoreVertical } from 'lucide-react';
+import { Send, ArrowLeft, MoreVertical, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useChatStore } from '@/store/chatStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm';
 export const ChatInterface = () => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { currentConversation, isStreaming, mode, sendMessage, setCurrentView } = useChatStore();
+  const { currentConversation, isStreaming, mode, sendMessage, setCurrentView, retryMessage } = useChatStore();
   const { isOnline } = useChatStore();
 
   const scrollToBottom = () => {
@@ -34,6 +34,13 @@ export const ChatInterface = () => {
       handleSend();
     }
   };
+
+  const showTyping = (() => {
+    if (!isStreaming) return false;
+    const msgs = currentConversation?.messages || [];
+    const last = msgs[msgs.length - 1];
+    return !!(last && last.role === 'assistant' && (!last.content || last.content.length === 0));
+  })();
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
@@ -77,6 +84,7 @@ export const ChatInterface = () => {
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
+                title={message.status === 'failed' ? (message.error || 'Message failed') : undefined}
                 className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 ${
                   message.role === 'user'
                     ? 'bg-[hsl(var(--message-user))] text-foreground'
@@ -100,19 +108,33 @@ export const ChatInterface = () => {
                   </ReactMarkdown>
                 </div>
 
+                {message.status === 'failed' && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-destructive">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>{message.error || 'Something went wrong'}</span>
+                    <Button variant="outline" size="sm" className="ml-2 h-6 px-2 text-xs" onClick={() => retryMessage(message.id)}>
+                      <RotateCcw className="h-3 w-3 mr-1" /> Retry
+                    </Button>
+                  </div>
+                )}
+
                 {message.citations && message.citations.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground space-y-1">
                     <div className="font-medium mb-1">References:</div>
-                    {message.citations.map((citation, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <span className="text-primary">•</span>
-                        <span>
-                          {citation.chapter_title}
-                          {citation.section_title && `, ${citation.section_title}`}
-                          {citation.page_number && ` (p. ${citation.page_number})`}
-                        </span>
-                      </div>
-                    ))}
+                    {[...message.citations]
+                      .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
+                      .slice(0, 3)
+                      .map((citation, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-primary">•</span>
+                          <button className="text-left hover:underline" title="Clickable in future updates">
+                            {citation.chapter_title}
+                            {citation.section_title && `, ${citation.section_title}`}
+                            {citation.page_number && ` (p. ${citation.page_number})`}
+                          </button>
+                          <span className="ml-auto text-[10px] text-foreground/60">{Math.round((citation.similarity ?? 0) * 100)}%</span>
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>
@@ -120,7 +142,7 @@ export const ChatInterface = () => {
           ))}
         </AnimatePresence>
 
-        {isStreaming && (
+        {showTyping && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
