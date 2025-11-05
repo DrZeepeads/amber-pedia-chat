@@ -103,7 +103,15 @@ export const ChatInterface = () => {
                 )}
                 
                 <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      script: () => null,
+                      iframe: () => null,
+                      object: () => null,
+                      embed: () => null,
+                    }}
+                  >
                     {message.content}
                   </ReactMarkdown>
                 </div>
@@ -198,10 +206,16 @@ export const ChatInterface = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a follow-up question..."
-              disabled={isStreaming}
-              className="min-h-[60px] resize-none border-0 focus-visible:ring-0 pr-14"
+              placeholder="Ask a pediatric knowledge question..."
+              className="min-h-[60px] max-h-[200px] resize-none pr-12 border-0 focus-visible:ring-0"
+              disabled={isStreaming || !isOnline}
+              maxLength={2000}
             />
+            <span className={`absolute bottom-2 right-12 text-xs ${
+              input.length > 1800 ? 'text-red-500' : 'text-gray-400'
+            }`}>
+              {input.length}/2000
+            </span>
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isStreaming}
