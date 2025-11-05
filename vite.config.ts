@@ -35,6 +35,10 @@ export default defineConfig(({ mode }) => {
         devOptions: { enabled: true, type: "module" },
         workbox: {
           globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
           runtimeCaching: [
             {
               urlPattern: ({ request }) => request.destination === "script" || request.destination === "style",
